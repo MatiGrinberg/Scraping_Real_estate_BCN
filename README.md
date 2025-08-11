@@ -13,8 +13,6 @@ This project scrapes real estate listings (both **sale** and **rent**, for **new
 │── Buy_scraper.py # Scrapes sale properties (old and new)
 │── Rent_Analyze.py # Loads and analyzes scraped rental data
 │── Buy_Analyze.py # Loads and analyzes scraped sale data
-│── requirements.txt # Python dependencies for this project
-│── README.md # Project documentation
 
 
 ---
