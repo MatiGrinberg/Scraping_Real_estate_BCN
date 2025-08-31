@@ -39,11 +39,18 @@ def scrape_new_properties(shape, max_p=300000, min_p=60000):
     df.to_csv(f"{f_t}{typ}.csv", index=False)
     return df
 
+
 # OLD
-def scrape_old_properties(shape,max_p=500000,min_p=200000,min_m=70,max_m=250,condition="obra-nueva,buen-estado,",t="",extra_filters=""):
-    typ, f_t = "venta-viviendas",str(min_p)+"-"+str(max_p)
-    filters = (f"con-precio-hasta_{max_p},"f"precio-desde_{min_p},"f"metros-cuadrados-mas-de_{min_m},"f"metros-cuadrados-menos-de_{max_m},"f"{extra_filters}""de-dos-dormitorios,""de-tres-dormitorios,""de-cuatro-cinco-habitaciones-o-mas,""balcon-y-terraza,"f"{condition}""sin-inquilinos/")
-    base_url = (f"https://www.idealista.com/areas/{typ}/"f"{filters}"f"?shape=%28%28{shape}%29%29&ordenado-por=precios-asc")
+def scrape_old_properties(shape,max_p=500000,min_p=200000,min_m=70,max_m=250,condition="obra-nueva,buen-estado,",t="",extra_filters="",property_type="venta-viviendas"):
+    f_t = f"{min_p}-{max_p}"
+    if property_type == "venta-viviendas":
+        filters = (f"con-precio-hasta_{max_p},"f"precio-desde_{min_p},"f"metros-cuadrados-mas-de_{min_m},"f"metros-cuadrados-menos-de_{max_m},"f"{extra_filters}""de-dos-dormitorios,""de-tres-dormitorios,""de-cuatro-cinco-habitaciones-o-mas,""balcon-y-terraza,"f"{condition}""sin-inquilinos")
+    elif property_type == "venta-terrenos":
+        filters = (f"con-precio-hasta_{max_p},"f"metros-cuadrados-mas-de_{min_m},"f"metros-cuadrados-menos-de_{max_m}")
+    else:
+        raise ValueError(f"Unsupported property_type: {property_type}")
+    filters = filters.strip(",/")
+    base_url = (f"https://www.idealista.com/areas/{property_type}/"f"{filters}/?shape=%28%28{shape}%29%29&ordenado-por=precios-asc")
     print("Base URL:", base_url)
     driver = initialize_driver()
     driver.get(base_url)
@@ -72,6 +79,7 @@ def scrape_old_properties(shape,max_p=500000,min_p=200000,min_m=70,max_m=250,con
             else:
                 url = f"{base_url.rstrip('/')}/pagina-{page_num}"
         print(f"Scraping page {page_num}/{last_page_num}: {url}\n")
+        time.sleep(random.uniform(5, 15))
         scrape_page_v2(data, url)
     df = pd.DataFrame(data)
     print(f"Scraping completed. Collected {len(df)} rows.")
@@ -79,17 +87,18 @@ def scrape_old_properties(shape,max_p=500000,min_p=200000,min_m=70,max_m=250,con
     df['Location'] = locations
     print(f"Links: {len(df.Link.unique())} | Locations: {len(locations)}")
     chal = extra_filters.strip(',/').replace(',', '_')
-    df.to_csv(f"{f_t}{typ}{'_'+t if t else ''}.csv", index=False)
+    df.to_csv(f"{f_t}{property_type}{'_'+t if t else ''}.csv", index=False)
     return df
 
 shape_new_dep="gif%7BFgpeI%7D_CujDibPk_o%40iaNupYa%60GqxUifHgaKc_%40idPteBgzGf%60J_bOb%7Cr%40%60yz%40hnHvgeAidThyY"
 shape_old_dep="cq%7CzFsbvJ%7BgI%7BeMgzFhhC%7D%60Ija%40w_CucAmsFgvTgsF%7BlPtXaz%5DpyEoyCrlc%40xza%40btF%60og%40ofCtmI"
 shape_old_chalet="kdr%7BF%7BkmJanKkkHafC%7DeMoyDeoQyeBo%60Gw_EwtLolEe%7EEyeCkyN%3FivIjmMufQn_CbiGpgk%40nwr%40hzExae%40geZzlP"
 shape_old_reform="_%60xzF%7BrwJyaJia%40ohMsqG_tH%3FcsD%60%7B%40m_BuqGelA%7DaOyyGwiVyKyiKdsFcaV%7ClFpnBltg%40t~_%40%7BK%7Cuu%40"
+shape_land="_uzzFsfrIyk%5Cqf%5CusGeoQmgMcv_%40wrCouPpe%40caVtsJkdPb%7Dr%40z_tAby%40%7C%60l%40ytH%60iG"
 new_df=scrape_new_properties(shape_new_dep,max_p=360000,min_p=150000)
 old_df=scrape_old_properties(shape_old_dep,max_p=240000,min_p=160000,min_m=80,max_m=160,condition="obra-nueva,buen-estado,",t='depto') 
 old_chal=scrape_old_properties(shape_old_chalet,max_p=300000,min_p=100000,min_m=80,max_m=200,extra_filters="chalets,",condition="obra-nueva,buen-estado,",t="chalets")
 old_reform = scrape_old_properties(shape=shape_old_reform,max_p=200000,min_p=60000,min_m=80,max_m=160,condition="para-reformar,",t="reform")
-
+land_df=scrape_old_properties(shape=shape_land,max_p=90000,min_p=0,min_m=80,max_m=500,condition="",t="land",extra_filters="",property_type="venta-terrenos")
 
 

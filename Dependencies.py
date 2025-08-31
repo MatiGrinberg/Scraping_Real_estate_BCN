@@ -17,17 +17,18 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.options import Options
 import undetected_chromedriver as uc
 
-csv_map={"Buy_Reform": "60000-200000venta-viviendas__reform.csv","Rent_New": "alquiler-obranueva.csv","Buy_New": "venta-obranueva.csv","Buy_Chalet": "100000-300000venta-viviendas__chalets.csv","Buy_Old": "venta-viviendas.csv","Rent_Old": "alquiler-viviendas.csv"}
+csv_map={"Buy_Reform": "60000-200000venta-viviendas__reform.csv","Rent_New": "alquiler-obranueva.csv","Buy_New": "venta-obranueva.csv","Buy_Chalet": "100000-300000venta-viviendas__chalets.csv","Buy_Old": "venta-viviendas.csv","Rent_Old":"alquiler-viviendas.csv","Land":"0-90000venta-terrenos_land.csv"}
 csv_map=dict(sorted(csv_map.items()))
 pd.set_option('display.max_colwidth', None)
 timeout = 10 
-USER_AGENTS = ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36","Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36"]
+USER_AGENTS=["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36","Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36"]
 
 def initialize_driver():
     chrome_options = uc.ChromeOptions()
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_argument(f"user-agent={random.choice(USER_AGENTS)}")
     driver = uc.Chrome(options=chrome_options)
     return driver
@@ -230,7 +231,10 @@ def filter_per_loc(d,l):
 def dupli_row(d,so):
     d[d.duplicated(keep=False)].sort_values(so)
 
-def prepare_data(df,max_pr=300,price_col='Price (€)', size_col='Area (m²)', price_per_sqm_col='Price/SqM', hab_col='Hab'):
+def prepare_data(df,max_pr=300,price_col='Price (€)',size_col='Area (m²)',price_per_sqm_col='Price/SqM',hab_col='Hab',kind="Property"):
+    if kind.lower()=="land":
+        df[size_col] = df[hab_col].str.replace("m²", "", regex=False).str.strip()
+        df[hab_col]=1
     df[size_col] = pd.to_numeric(df[size_col], errors='coerce')
     print("Null_Rows {}".format(len(df[df[size_col].isnull()])))
     df = df.dropna(subset=[size_col])
@@ -263,6 +267,8 @@ def filter_rent_rows(df, mx_pr_1h=1.2, mx_pr_room=0.8, min_area_1h=60,min_area_2
     if include:
         res = res[res['Location'].isin(include)]
     return res
+
+
 
 def filter_buy_rows(df,min_h=2,min_price_sqm=1.5,max_price_sqm=3,min_area_any=60,min_area_large=100,min_hab_large=3,max_size=200,exclude=None):
     base = (df['Price/SqM'] <= max_price_sqm)&(df['Price/SqM'] >= min_price_sqm) & (df['Area'] >= min_area_any)&(df['Hab'] >= min_h)&(df['Area']<=max_size)
@@ -304,7 +310,7 @@ def plot_correlation_heatmap(df, cols, title):
 
 def print_df_by_var(df,var,dfname):
     for v in var:
-        print('\n'+dfname+v)
+        print('\n'+dfname+"_"+v)
         print(sorted(df[v]))
 
 def plot_boxplot(df, x_col, y_col, locations, group_num=None, char=10):
