@@ -20,8 +20,8 @@ filter_by_string(df,'Link','99454089')
 
 # Filtering Rows via individual criteria
 exc_loc=['Terrassa','Mataró','Sabadell','Martorell','Sant Vicenç de Montalt','Cabrera de Mar']
-filt_old=filter_rent_rows(df,mx_pr_1h=1.2,mx_pr_room=0.7,min_area_1h=55,min_area_2h=70,min_area_3h=90,exclude=exc_loc).sort_values(['Hab','Area','Price'])#.drop('Location',axis=1)
-print(filt_old.shape,'\n',filt_old)
+filt_old=filter_rent_rows(df,mx_pr_1h=1.2,mx_pr_room=0.7,min_area_1h=55,min_area_2h=70,min_area_3h=90,exclude=[]).sort_values(['Hab','Area','Price'])#.drop('Location',axis=1)
+print(filt_old,'\n\nLength',len(filt_old))
 #filter_by_string(filt_old,'Link','99454089')
 #print_by_group(filt_old,'Location')
 

@@ -1,7 +1,7 @@
 from Dependencies import *
 print(list(csv_map.keys()))
 max_prices={"Buy_Reform":1.2,"Buy_New":2.5,"Buy_Chalet":2.3,"Buy_Old":2.4}
-# Pr/SqM => Recycle 1.5-2.1, Old 2.2-2.4, New 2.6-3.3, Chalet 1.6-2.1
+# Pr/SqM => Recycle 1.5-2.1, Old 2.2-2.4, New 2.6-3.3, Chalet 1.6-2.1, Land 0.3
 k='Land'
 df=pd.read_csv(csv_map[k])
 print('Shapes:',df.shape)
@@ -21,9 +21,9 @@ fil_loc=filter_per_loc(df,'Barcelona').sort_values('Price/SqM')
 #Filtering Rows via individual criteria (use max_prices[k])
 excl_locs=['Vilafranca del Penedès']
 fil_row=filter_buy_rows(df,min_h=1,min_price_sqm=0,max_price_sqm=1.5,min_area_any=70,min_area_large=100,min_hab_large=1,max_size=250).sort_values(['Area','Price/SqM']).drop('Hab',axis=1)
-print(len(fil_row),'\n',fil_row)
+print(fil_row,'\n\nLength',len(fil_row))
 locs=mean_by_location(fil_row,'Price/SqM')
-filter_per_loc(fil_row,'Vilafranca del Penedès')
+filter_per_loc(fil_row,locs[:-4])
 #df[df['Price/SqM']<0.2].sort_values('Area')
 
 

@@ -226,7 +226,7 @@ def filter_by_string(d,c,tx):
     return d[d[c].str.contains(tx, na=False)]
     
 def filter_per_loc(d,l):
-    return d[d['Location']==l]
+    return d[d['Location'].isin(l)]
 
 def dupli_row(d,so):
     d[d.duplicated(keep=False)].sort_values(so)
