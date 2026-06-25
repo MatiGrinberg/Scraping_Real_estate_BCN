@@ -23,6 +23,9 @@ https://www.idealista.com/areas/alquiler-viviendas/con-precio-hasta_900,metros-c
 # Mal_dentro
 https://www.idealista.com/areas/alquiler-viviendas/con-precio-hasta_900,metros-cuadrados-mas-de_60,de-dos-dormitorios,de-tres-dormitorios,de-cuatro-cinco-habitaciones-o-mas/mapa-google?shape=%28%28iu%7B%7EE%7CqoZq%7CGcyAguDivIfh%40qjOhlFdPpzIrhPi%7DCdaK%29%29
 
+# Costa Valenciana
+https://www.idealista.com/areas/alquiler-viviendas/con-precio-hasta_900,metros-cuadrados-mas-de_60,de-dos-dormitorios,de-tres-dormitorios,de-cuatro-cinco-habitaciones-o-mas/mapa-google?shape=%28%28_kdgFrkiC_jh%40%7DzKiy_%40i%7Ci%40c%60Yspd%40wi%5Cijp%40ovO%7DoUq%7BSpvdAoon%40%7EaOsfbA%7EzKg%60e%40_pUqmp%40ig%60%40ixd%40qa%7B%40rl%60CzxeAtfsC%7BsoBrytCxlsEmhSrxJ%29%29
+
 
 
 
