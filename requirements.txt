@@ -4,3 +4,5 @@ seaborn
 numpy
 selenium
 undetected-chromedriver
+# Compatibilidad de undetected-chromedriver con Python 3.12+ (distutils)
+setuptools
