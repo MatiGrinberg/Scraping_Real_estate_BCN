@@ -213,12 +213,14 @@ def run_scraper(operation, property_type, min_price, max_price, min_area, max_ar
                 
                 condition = "obra-nueva,buen-estado,"
                 extra_filters = ""
+                elevator_filter = "ascensor," if property_type == "Used" else ""
+                floor_filters = "ultimas-plantas,plantas-intermedias," if property_type == "Used" else ""
                 if property_type == "Reform":
                     condition = "para-reformar,"
                 elif property_type == "Chalet":
                     extra_filters = "chalets,"
                     
-                url_filter = f"con-precio-hasta_{max_price},precio-desde_{min_price},metros-cuadrados-mas-de_{min_area},metros-cuadrados-menos-de_{max_area},{extra_filters}de-dos-dormitorios,de-tres-dormitorios,de-cuatro-cinco-habitaciones-o-mas,balcon-y-terraza,{condition}sin-inquilinos"
+                url_filter = f"con-precio-hasta_{max_price},precio-desde_{min_price},metros-cuadrados-mas-de_{min_area},metros-cuadrados-menos-de_{max_area},{extra_filters}de-dos-dormitorios,de-tres-dormitorios,de-cuatro-cinco-habitaciones-o-mas,{elevator_filter}balcon-y-terraza,{floor_filters}{condition}sin-inquilinos"
             
             full_url = f"{base_url}/{prop_path}/{url_filter}/"
             if shape_param:
