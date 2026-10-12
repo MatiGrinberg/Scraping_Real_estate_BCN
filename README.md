@@ -74,3 +74,45 @@ All scraped data is stored in the `output/` folder. You can analyze it using the
 - `scripts/`: Internal scraping logic and Selenium drivers.
 - `nb/`: Jupyter Notebooks for analytics.
 - `output/`: Folder where the output `.csv` files and subfolders are stored.
+
+## Optional details for Buy → Used
+
+Individual listing visits also collect these optional CSV columns:
+
+| Column | Value |
+| --- | --- |
+| `Useful area (m²)` | Numeric usable area, distinct from built area |
+| `Orientation` | Reported orientation, such as `sur` or `sur, este` |
+| `Construction year` | Construction year |
+| `Energy rating` | Consumption rating A–G (not emissions) |
+| `Energy consumption (kWh/m² year)` | Numeric energy consumption |
+| `No heating` | True when explicitly absent, False when explicitly present, blank if unknown |
+
+Missing details are saved as blank fields. This extraction is enabled only for Buy → Used,
+and reuses the individual visit used to collect the location. Old CSVs remain readable;
+these columns are treated as unknown when absent. Existing CSVs are not enriched retroactively.
+
+In `nb/Analytics.ipynb`, initial cleaning checks missing values only in the original five
+columns. Optional missing values never cause a row to be discarded during this step.
+The final `filter_buy_rows` call exposes these parameters, all set to `None` by default:
+
+```python
+useful_area=None,         # e.g. ('>=', 80)
+orientation=None,         # e.g. ['sur', 'sur, este']; full value, case-insensitive
+construction_year=None,   # e.g. ('>=', 1980)
+energy_rating=None,       # e.g. ['A', 'B', 'C', 'D', 'E']
+energy_consumption=None,  # e.g. ('<', 80)
+no_heating=None           # True: no heating; False: heating explicitly present
+```
+
+Numeric filters support `<`, `<=`, `>`, `>=`, `==`, and `!=`.
+Each active optional filter accepts unknown values as well as matching values.
+For example, `energy_consumption=('<', 80)` excludes known values of 80 or more,
+but keeps missing consumption values. All existing price, area, room and location
+filters still apply. Re-run the cleaning and function-definition cells before the final filter.
+
+Local checks (without scraping):
+
+```bash
+python -B -m unittest discover -s tests -v
+```

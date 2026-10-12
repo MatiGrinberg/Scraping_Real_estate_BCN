@@ -8,6 +8,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from scripts.utils import initialize_driver, extract_shape_from_url
 
+from scripts.property_details import OPTIONAL_COLUMNS, parse_used_details
+
 TIMEOUT = 10
 
 def scrape_links_from_page(url, collected_links, max_retries=3):
@@ -160,6 +162,43 @@ def get_location_for_links(links, max_retries=2, log_callback=None):
         locations.append(location)
     return locations, visited_count
 
+def get_used_details_for_links(links, max_retries=2, log_callback=print):
+    """Collect location and optional fields in the same individual-page visit."""
+    records = []
+    for idx, link in enumerate(links, start=1):
+        record = {"Location": "Unknown", **dict.fromkeys(OPTIONAL_COLUMNS)}
+        for attempt in range(max_retries):
+            driver = None
+            try:
+                log_callback(f"[{idx}/{len(links)}] Extrayendo ubicación y características: {link}")
+                driver = initialize_driver()
+                driver.get(link)
+                # Wait for either the location or the detail block, independently.
+                WebDriverWait(driver, TIMEOUT).until(lambda d:
+                    d.find_elements(By.CSS_SELECTOR, 'span.main-info__title-minor, div.details-property'))
+                locations = driver.find_elements(By.CSS_SELECTOR, 'span.main-info__title-minor')
+                if locations:
+                    record['Location'] = locations[0].text.strip() or 'Unknown'
+                try:
+                    block = WebDriverWait(driver, TIMEOUT).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, 'div.details-property')))
+                    record.update(parse_used_details(block.get_attribute('outerHTML')))
+                except TimeoutException:
+                    log_callback(f"Sin características opcionales informadas: {link}")
+                break
+            except Exception as exc:
+                log_callback(f"Error en detalles ({attempt + 1}/{max_retries}) {link}: {exc}")
+                if attempt + 1 < max_retries:
+                    time.sleep(random.uniform(2, 5))
+            finally:
+                if driver is not None:
+                    try:
+                        driver.quit()
+                    except Exception:
+                        pass
+        records.append(record)
+    return records, len(links)
+
 # Main runner functions
 def run_scraper(operation, property_type, min_price, max_price, min_area, max_area, shape_url, output_filename, log_callback=print, confirm_callback=None):
     """Main execution entry point for the GUI."""
@@ -214,19 +253,20 @@ def run_scraper(operation, property_type, min_price, max_price, min_area, max_ar
                 condition = "obra-nueva,buen-estado,"
                 extra_filters = ""
                 elevator_filter = "ascensor," if property_type == "Used" else ""
+                exterior_filter = "exterior," if property_type == "Used" else ""
                 floor_filters = "ultimas-plantas,plantas-intermedias," if property_type == "Used" else ""
                 if property_type == "Reform":
                     condition = "para-reformar,"
                 elif property_type == "Chalet":
                     extra_filters = "chalets,"
                     
-                url_filter = f"con-precio-hasta_{max_price},precio-desde_{min_price},metros-cuadrados-mas-de_{min_area},metros-cuadrados-menos-de_{max_area},{extra_filters}de-dos-dormitorios,de-tres-dormitorios,de-cuatro-cinco-habitaciones-o-mas,{elevator_filter}balcon-y-terraza,{floor_filters}{condition}sin-inquilinos"
+                url_filter = f"con-precio-hasta_{max_price},precio-desde_{min_price},metros-cuadrados-mas-de_{min_area},metros-cuadrados-menos-de_{max_area},{extra_filters}de-dos-dormitorios,de-tres-dormitorios,de-cuatro-cinco-habitaciones-o-mas,{elevator_filter}balcon-y-terraza,{exterior_filter}{floor_filters}{condition}sin-inquilinos"
             
             full_url = f"{base_url}/{prop_path}/{url_filter}/"
             if shape_param:
                 full_url += f"?shape={shape_param}&ordenado-por=precios-asc"
                 
-            return _scrape_old_runner(full_url, output_path, log_callback=log_callback, confirm_callback=confirm_callback)
+            return _scrape_old_runner(full_url, output_path, log_callback=log_callback, confirm_callback=confirm_callback, collect_used_details=(property_type == "Used"))
 
 def _get_search_metadata(url):
     driver = initialize_driver()
@@ -296,7 +336,7 @@ def _scrape_new_runner(base_url, output_path, is_rent, log_callback, confirm_cal
     return (f"Terminado. Total recolectado: {len(df)} propiedades. Guardado en {output_path}\n"
             f"[Check Consistencia: Links acumulados al inicio: {total_accumulated} | Links procesados individualmente: {visited_count}]")
 
-def _scrape_old_runner(base_url, output_path, log_callback, confirm_callback=None):
+def _scrape_old_runner(base_url, output_path, log_callback, confirm_callback=None, collect_used_details=False):
     log_callback(f"Buscando el número total de páginas en: {base_url}")
     last_page_num, total_props = _get_search_metadata(base_url)
     log_callback(f"Total de páginas: {last_page_num} | Propiedades: {total_props}")
@@ -327,8 +367,17 @@ def _scrape_old_runner(base_url, output_path, log_callback, confirm_callback=Non
     df = pd.DataFrame(data)
     if not df.empty and 'Link' in df.columns:
         log_callback("Extrayendo ubicación de los enlaces de las propiedades...")
-        locations, visited_count = get_location_for_links(df['Link'].tolist(), log_callback=log_callback)
-        df['Location'] = locations
+        if collect_used_details:
+            records, visited_count = get_used_details_for_links(df['Link'].tolist(), log_callback=log_callback)
+            for column in ('Location', *OPTIONAL_COLUMNS):
+                df[column] = [record[column] for record in records]
+        else:
+            locations, visited_count = get_location_for_links(df['Link'].tolist(), log_callback=log_callback)
+            df['Location'] = locations
+    if collect_used_details:
+        for column in OPTIONAL_COLUMNS:
+            if column not in df.columns:
+                df[column] = pd.Series(dtype=object)
         
     import os
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
