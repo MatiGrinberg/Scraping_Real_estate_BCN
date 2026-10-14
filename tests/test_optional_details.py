@@ -92,6 +92,7 @@ class NotebookFiltersTests(unittest.TestCase):
             'No heating': [True,False,None,None]})
 
     def filtered(self, d=None, **kwargs):
+        kwargs.setdefault("max_price_useful_sqm", None)  # Isolate the other optional filters.
         return self.env['filter_buy_rows'](self.data() if d is None else d, **kwargs).Link.tolist()
 
     def test_defaults_and_old_csv(self):
@@ -113,6 +114,36 @@ class NotebookFiltersTests(unittest.TestCase):
         self.assertEqual(self.filtered(no_heating=True), ['a','c','d'])
         self.assertEqual(self.filtered(energy_consumption=('<',80), no_heating=False), ['d'])
 
+    def test_useful_price_default_strict_boundary_and_unknown(self):
+        d = pd.DataFrame({'Link': ['below', 'equal', 'above', 'missing', 'zero', 'negative'],
+            'Location': ['X'] * 6, 'Price (€)': [199999, 200000, 200001, 200000, 200000, 200000],
+            'Area (m²)': [100] * 6, 'Hab': [3] * 6, 'Price/SqM': [2000] * 6,
+            'Useful area (m²)': [80, 80, 80, None, 0, -1]})
+        original = d.copy(deep=True)
+        result = self.env['filter_buy_rows'](d)
+        self.assertEqual(result.Link.tolist(), ['below', 'missing', 'zero', 'negative'])
+        self.assertEqual(result.iloc[0]['Price/UsefulSqM'], 2500)
+        self.assertEqual(str(result['Price/UsefulSqM'].dtype), 'Int64')
+        self.assertTrue(result.iloc[1:]['Price/UsefulSqM'].isna().all())
+        self.assertEqual(len(self.env['filter_buy_rows'](d, max_price_useful_sqm=None)), 6)
+        pd.testing.assert_frame_equal(d, original)
+
+    def test_cleaning_computes_useful_price_without_dropping_unknown(self):
+        source = next(s for s in notebook_sources() if '#  CARGAR Y LIMPIAR DATOS' in s)
+        d = self.data()
+        d['Useful area (m²)'] = [80, None, 0, -1]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'test_buy_used.csv'
+            d.to_csv(path, index=False)
+            env = {'pd': pd, 'np': np, 'CSV_FILENAME': str(path), 'base_name': 'test_buy_used', 'display': lambda *a: None}
+            with contextlib.redirect_stdout(io.StringIO()):
+                exec(source, env)
+            result = env['df']
+            self.assertEqual(len(result), 4)
+            self.assertEqual(result.loc[0, 'Price/UsefulSqM'], 2500)
+            self.assertEqual(str(result['Price/UsefulSqM'].dtype), 'Int64')
+            self.assertTrue(result.loc[1:, 'Price/UsefulSqM'].isna().all())
+
     def test_cleaning_keeps_optional_nulls(self):
         source = next(s for s in notebook_sources() if '#  CARGAR Y LIMPIAR DATOS' in s)
         for old_format in [False, True]:
@@ -128,6 +159,7 @@ class NotebookFiltersTests(unittest.TestCase):
                 with contextlib.redirect_stdout(io.StringIO()):
                     exec(source, env)
                 self.assertEqual(len(env['df']), 4)
+                self.assertTrue(env['df']['Price/UsefulSqM'].isna().all())
                 self.assertTrue(env['df'][list(OPTIONAL_COLUMNS)].isna().all().all())
 
 
